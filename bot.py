@@ -1,4 +1,4 @@
-from datetime import datetime, time, date
+from datetime import datetime, time, date, timedelta
 import os
 from dotenv import load_dotenv
 import discord
@@ -42,11 +42,10 @@ def get_time(date_str: str):
     else:
         return f"{time24} AM"
 
-@bot.command()
-async def today(ctx):
-    service = services[ctx.author.id]
-    start = datetime.combine(datetime.now(), time.min).isoformat() + "Z" # "Z" indicates UTC time
-    end = datetime.combine(datetime.now(), time.max).isoformat() + "Z"
+def get_day(day: datetime, id):
+    service = services[id]
+    start = datetime.combine(day, time.min).isoformat() + "Z" # "Z" indicates UTC time
+    end = datetime.combine(day, time.max).isoformat() + "Z"
     events_result = (
         service.events().list(
             calendarId="primary",
@@ -56,8 +55,14 @@ async def today(ctx):
             orderBy="startTime"
         ).execute()
     )
+    return events_result["items"]
+
+@bot.command()
+async def today(ctx):
+    events = get_day(datetime.now(),ctx.author.id)
+
     fields = []
-    for e in events_result["items"]:
+    for e in events:
         time_start = get_time(e['start']['dateTime'])
         time_end = get_time(e['end']['dateTime'])
         field = {
@@ -69,6 +74,34 @@ async def today(ctx):
       "type": "rich",
       "title": "Today",
       "description": date.today(),
+      "color": 0x00FFFF,
+      "fields": fields
+    })
+    await ctx.reply(embed=embed)
+
+@bot.command()
+async def week(ctx):
+    dt = datetime.now()
+    start = datetime.combine(dt - timedelta(days=dt.weekday()+1), time.min)
+    end = datetime.combine(start + timedelta(days=6), time.max)
+
+    fields = []
+    weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    for i in range(7):
+        day = start + timedelta(days=i)
+        value = ""
+        events = get_day(day, ctx.author.id)
+        for e in events:
+            value += e["summary"]
+        fields.append({
+            "name": weekdays[i] + (" (Today)" if dt.weekday()+1 == i else ""),
+            "value": value,
+            "inline": False
+        })
+
+    embed = discord.Embed.from_dict({
+      "type": "rich",
+      "title": "This week",
       "color": 0x00FFFF,
       "fields": fields
     })
