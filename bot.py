@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 from googleapiclient.discovery import build
 import auth
+import asyncio
 
 service = {}
 
@@ -23,11 +24,12 @@ async def ping(ctx):
 
 @bot.command()
 async def login(ctx):
-    creds = auth.authorize(str(ctx.author.id))
+    creds = await auth.authorize(str(ctx.author.id))
     msg = f"Logged in!\nExpiry: {creds.expiry}\n"
 
     global service
-    service = build("calendar", "v3", credentials=creds)
+    # build requires accessing the Google API, thus make it a coroutine
+    service = await asyncio.to_thread(build("calendar", "v3", credentials=creds))
 
     await ctx.reply(msg)
 
