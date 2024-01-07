@@ -28,8 +28,7 @@ async def login(ctx):
     msg = f"Logged in!\nExpiry: {creds.expiry}\n"
 
     global service
-    # build requires accessing the Google API, thus make it a coroutine
-    service = await asyncio.to_thread(build("calendar", "v3", credentials=creds))
+    service = await asyncio.to_thread(build, serviceName ="calendar", version = "v3", credentials=creds)
 
     await ctx.reply(msg)
 
@@ -37,13 +36,11 @@ async def login(ctx):
 async def today(ctx):
     start = datetime.combine(datetime.now(), time.min).isoformat() + "Z" # "Z" indicates UTC time
     end = datetime.combine(datetime.now(), time.max).isoformat() + "Z"
-    events_result = (
-        service.events().list(
-            calendarId="primary",
-            timeMin=start,
-            timeMax=end,
-        ).execute()
-    )
+    events_result = service.events().list(
+        calendarId="primary",
+        timeMin=start,
+        timeMax=end,
+    ).execute()
     msg = "" 
     for e in events_result["items"]:
         msg += "- " + e["summary"] + "\n"

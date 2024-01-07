@@ -15,22 +15,24 @@ async def authorize(user: str) -> Credentials:
     if tokens.get(user) != None:
         creds = Credentials.from_authorized_user_info(tokens.get(user), SCOPES)
         #creds = tokens.get(user)
-
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            await asyncio.to_thread(creds.refresh(Request()))
+            await asyncio.to_thread(creds.refresh(), Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 "credentials.json", SCOPES
             )
-            await asyncio.to_thread(flow.run_local_server(port=0))
+            creds = await asyncio.to_thread(flow.run_local_server, port=0)
             tokens[user] = json.loads(creds.to_json())
     writeFile()
     return creds
 
+async def main():
+    await authorize("TEST")
+
 if __name__ == "__main__":
-    authorize("TEST")
+    main()
 
 def writeFile():
     with open("tokens.json", "w") as f:
